@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Campus WiFi Sharing · Evolutionary Game Full Version</title>
+    <script src="https://cdn.bootcdn.net/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+    <style>
+        /* ================= 1. Base Reset & General Styles ================= */
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', 'Segoe UI', sans-serif; }
+        body { background: linear-gradient(145deg, #f0f5fa 0%, #e9f0f7 100%); min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 20px; }
+        .container { width: 1150px; max-width: 100%; background: rgba(255,255,255,0.95); backdrop-filter: blur(12px); border-radius: 30px; box-shadow: 0 20px 40px rgba(0,0,0,0.1); padding: 30px; }
+
+        /* Page Transition Animations */
+        .page { display: none; animation: fade 0.3s ease; }
+        .page.active { display: block; }
+        @keyframes fade { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Typography & Forms */
+        h2 { font-size: 1.8rem; color: #1e2f5e; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+        input, select { width: 100%; padding: 12px 15px; border: 2px solid #dce5f0; border-radius: 15px; margin-bottom: 12px; font-size: 1rem; transition: 0.2s; }
+        input:focus, select:focus { border-color: #3b82f6; outline: none; box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
+
+        /* Button System */
+        button { background: #1e2f5e; color: white; border: none; padding: 10px 20px; border-radius: 20px; cursor: pointer; transition: 0.2s; font-weight: bold; }
+        button:hover { background: #2b3f74; transform: translateY(-2px); box-shadow: 0 5px 15px rgba(30, 47, 94, 0.3); }
+        button.secondary { background: #f0f4f8; color: #1e2f5e; border: 1px solid #cdd9ed; box-shadow: none; }
+        button.secondary:hover { background: #e2e8f0; }
+        button.danger { background: #ef4444; color: white; }
+        button.danger:hover { background: #dc2626; }
+
+        /* ================= 2. Home Cards: Large Centered Icons ================= */
+        .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; }
+        .info-card { background: white; border-radius: 20px; padding: 25px 20px; border: 1px solid #eef2f6; box-shadow: 0 4px 10px rgba(0,0,0,0.03); display: flex; flex-direction: column; justify-content: space-between; align-items: center; transition: 0.3s; }
+        .info-card:hover { transform: translateY(-5px); box-shadow: 0 15px 30px rgba(0,0,0,0.08); }
+        .info-card h3 { color: #1e2f5e; margin-bottom: 5px; font-size: 1.2rem; }
+        .card-icon { font-size: 5.5rem; line-height: 1; margin: 20px 0 30px 0; text-align: center; text-shadow: 0 10px 20px rgba(0,0,0,0.1); }
+        .info-card button { width: 100%; font-size: 1.1rem; padding: 12px; }
+
+        /* ================= 3. UI Common Components ================= */
+        .score-badge { background: #1e2f5e; color: #ffffff !important; padding: 5px 15px; border-radius: 30px; font-weight: bold; font-size: 1.5rem; }
+        #notification { display: none; position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: #1e2f5e; color: white; padding: 12px 24px; border-radius: 30px; z-index: 1000; box-shadow: 0 10px 20px rgba(0,0,0,0.2); }
+        .list-item { background: white; padding: 15px; border-radius: 15px; margin-bottom: 10px; border-left: 4px solid #3b82f6; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
+
+        /* ================= 4. Evolution Sandbox Dashboard Special Styles ================= */
+        .dash-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 15px; }
+        .dash-card { background: white; border-radius: 24px; padding: 20px; border: 1px solid #e3edf5; box-shadow: 0 4px 12px rgba(0,0,0,0.02); }
+        .dash-card h3 { font-size: 1.1rem; color: #1e2f5e; text-align: center; margin-bottom: 15px; font-weight: bold; }
+        .chart-wrap { height: 220px; position: relative; display: flex; justify-content: center; }
+        .dash-footer { text-align: center; margin-top: 15px; font-size: 0.9rem; font-weight: bold; padding-top: 15px; border-top: 1px dashed #dce5f0; }
+        .dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; margin: 0 5px; }
+
+        /* Game Matrix */
+        .matrix-row { display: grid; grid-template-columns: 80px 1fr 1fr 1fr; gap: 5px; margin-bottom: 5px; text-align: center; }
+        .matrix-head { font-size: 0.85rem; color: #666; font-weight: bold; padding-bottom: 5px; }
+        .matrix-cell { border: 1px solid #eef2f6; border-radius: 10px; padding: 8px 0; background: #fafafa; }
+        .matrix-cell strong { display: block; font-size: 1.2rem; }
+        .matrix-cell span { font-size: 0.75rem; color: #999; }
+        .bg-coop { border-left: 4px solid #86efac; } .bg-def { border-left: 4px solid #fdba74; } .bg-rec { border-left: 4px solid #93c5fd; }
+        .text-coop { color: #10b981; } .text-def { color: #ef4444; } .text-rec { color: #3b82f6; }
+
+        /* Key Metrics */
+        .kpi-row { display: flex; justify-content: space-around; text-align: center; margin: 30px 0; }
+        .kpi-item p { color: #666; font-size: 0.9rem; margin-bottom: 5px; }
+        .kpi-item strong { font-size: 2.5rem; color: #1e2f5e; }
+        .kpi-divider { width: 1px; background: #e2e8f0; }
+
+        /* ================= 5. Leaderboard & Admin ================= */
+        .rank-top-card { flex: 1; padding: 20px; border-radius: 30px; min-width: 200px; }
+        .grade-bar { height: 30px; border-radius: 30px; overflow: hidden; display: flex; margin-top: 10px; font-size: 0.8rem; font-weight: bold; color: white; line-height: 30px; text-align: center; }
+        .grade-s { background: #7e65cb; } .grade-a { background: #4e91e3; } .grade-b { background: #fea86e; } .grade-c { background: #ff7f7f; }
+        .admin-section { border: 1px solid #e2e8f0; padding: 20px; border-radius: 15px; margin-bottom: 20px; background: #f8fafc; }
+    </style>
+</head>
+<body>
+<div id="notification">🔔 <span id="notificationText"></span></div>
+
+<div class="container">
+    <div class="page active" id="authPage">
+        <h2 style="justify-content: center; font-size: 2.2rem; margin-bottom: 30px;">📡 Campus WiFi Game Platform</h2>
+        <div class="info-card" style="max-width: 400px; margin: 0 auto; display: block;">
+            <div id="loginForm">
+                <h3 style="text-align: center;">🔐 User Login</h3>
+                <input type="text" id="l_sid" placeholder="Student ID (e.g., root or 2024001)" value="root" style="margin-top: 15px;">
+                <input type="password" id="l_pwd" placeholder="Password" value="root123">
+                <button onclick="login()" style="width: 100%;">Login</button>
+                <p style="margin-top: 15px; text-align: center; font-size: 0.9rem;">No account? <a href="javascript:void(0)" onclick="toggleAuth()">Register (Get 100 Points)</a></p>
+            </div>
+
+            <div id="regForm" style="display: none;">
+                <h3 style="text-align: center;">✨ New User Registration</h3>
+                <input type="text" id="r_sid" placeholder="Student ID (as login account)" style="margin-top: 15px;">
+                <input type="text" id="r_name" placeholder="Nickname">
+                <input type="password" id="r_pwd" placeholder="Set Password">
+                <button onclick="register()" style="width: 100%; background: #10b981;">Complete Registration</button>
+                <p style="margin-top: 15px; text-align: center; font-size: 0.9rem;">Already have an account? <a href="javascript:void(0)" onclick="toggleAuth()">Back to Login</a></p>
+            </div>
+        </div>
+    </div>
+
+    <div class="page" id="homePage">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <h2>🏠 Home · My Assets <span class="score-badge" id="userScore">0</span></h2>
+
+            <div style="display: flex; gap: 10px;">
+                <button onclick="doDailySign()" style="background: #f59e0b;">📅 Daily Check-in</button>
+                <button id="adminBtn" style="display: none; background: #dc2626;" onclick="goTo('adminPage')">⚙️ Admin</button>
+                <button class="secondary" onclick="logout()">🚪 Logout</button>
+            </div>
+        </div>
+
+        <p style="margin-bottom: 25px; font-size: 1.1rem;">Welcome back, <strong id="userName"></strong></p>
+
+        <div class="card-grid">
+            <div class="info-card">
+                <h3>Publish Network</h3>
+                <div class="card-icon">📤</div>
+                <button onclick="goTo('sharePage')">Earn Points</button>
+            </div>
+            <div class="info-card">
+                <h3>Find Network</h3>
+                <div class="card-icon">📡</div>
+                <button onclick="goTo('wifiPage')">Auction Connect</button>
+            </div>
+            <div class="info-card">
+                <h3>Evolution Sandbox</h3>
+                <div class="card-icon">📈</div>
+                <button onclick="goTo('simPage')" style="background: #10b981;">Control Dashboard</button>
+            </div>
+            <div class="info-card">
+                <h3>Leaderboard</h3>
+                <div class="card-icon">🏆</div>
+                <button onclick="goTo('rankPage')" style="background: #8b5cf6;">View Rankings</button>
+            </div>
+            <div class="info-card">
+                <h3>Points Mall</h3>
+                <div class="card-icon">🎁</div>
+                <button onclick="goTo('scorePage')">Redeem Items</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="page" id="simPage">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+            <h2 style="margin: 0;">🧑‍🎓 Student Population Evolution Simulation</h2>
+            <div style="display: flex; gap: 15px; align-items: center;">
+                <span style="background: #e2e8f0; padding: 5px 15px; border-radius: 20px; font-weight: bold; color: #475569;">⏱️ Tick <span id="simTick">0</span></span>
+                <button class="secondary" onclick="goTo('homePage')">Back to Home</button>
+            </div>
+        </div>
+
+        <div class="dash-grid">
+            <div class="dash-card">
+                <h3>📊 Strategy Distribution Ratio</h3>
+                <div class="chart-wrap"><canvas id="strategyChart"></canvas></div>
+                <div class="dash-footer">
+                    <span style="color:#666"><span class="dot" style="background:#86efac"></span>Cooperator <span id="c_coop">0</span></span>
+                    <span style="color:#666"><span class="dot" style="background:#fdba74"></span>Free-rider <span id="c_def">0</span></span>
+                    <span style="color:#666"><span class="dot" style="background:#93c5fd"></span>Reciprocator <span id="c_rec">0</span></span>
+                </div>
+            </div>
+
+            <div class="dash-card">
+                <h3>📈 Reputation Level Distribution</h3>
+                <div class="chart-wrap"><canvas id="repBarChart"></canvas></div>
+                <div class="dash-footer">
+                    <span style="color:#666">Low Rep <span id="r_low">0</span> &nbsp;&nbsp; Med Rep <span id="r_med">0</span> &nbsp;&nbsp; High Rep <span id="r_high">0</span></span>
+                </div>
+            </div>
+
+            <div class="dash-card">
+                <h3>🎮 Game Payoff Matrix (Row: My Strategy / Col: Opponent's Strategy)</h3>
+                <div class="matrix-row matrix-head"><div></div><div>🤝 Cooperate</div><div>🆓 Free-ride</div><div>🔄 Reciprocate</div></div>
+                <div class="matrix-row">
+                    <div style="display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:0.9rem;">🤝 Cooperate</div>
+                    <div class="matrix-cell bg-coop"><strong class="text-coop">+3</strong><span>/ +3</span></div>
+                    <div class="matrix-cell bg-def"><strong class="text-def">-2</strong><span>/ +5</span></div>
+                    <div class="matrix-cell bg-rec"><strong class="text-coop">+1</strong><span>/ +1</span></div>
+                </div>
+                <div class="matrix-row">
+                    <div style="display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:0.9rem;">🆓 Free-ride</div>
+                    <div class="matrix-cell bg-def"><strong class="text-coop">+5</strong><span>/ -2</span></div>
+                    <div class="matrix-cell"><strong style="color:#666">0</strong><span>/ 0</span></div>
+                    <div class="matrix-cell bg-def"><strong class="text-def">-2</strong><span>/ +1</span></div>
+                </div>
+                <div class="matrix-row">
+                    <div style="display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:0.9rem;">🔄 Reciprocate</div>
+                    <div class="matrix-cell bg-rec"><strong class="text-coop">+1</strong><span>/ +1</span></div>
+                    <div class="matrix-cell bg-rec"><strong class="text-coop">+1</strong><span>/ -2</span></div>
+                    <div class="matrix-cell bg-rec"><strong class="text-coop">+1</strong><span>/ +1</span></div>
+                </div>
+            </div>
+
+            <div class="dash-card">
+                <h3>📊 Key Population Metrics</h3>
+                <div class="kpi-row">
+                    <div class="kpi-item"><p>Total Students</p><strong id="k_total">0</strong></div><div class="kpi-divider"></div>
+                    <div class="kpi-item"><p>Avg Reputation</p><strong id="k_rep">0</strong></div><div class="kpi-divider"></div>
+                    <div class="kpi-item"><p>Cooperation Freq</p><strong id="k_freq">0%</strong></div>
+                </div>
+                <div class="dash-footer" style="border-top:none; padding-top:0;">
+                    <span style="color:#666"><span class="dot" style="background:#86efac"></span>Cooperator <span id="k_coop">0</span></span>
+                    <span style="color:#666"><span class="dot" style="background:#fdba74"></span>Free-rider <span id="k_def">0</span></span>
+                    <span style="color:#666"><span class="dot" style="background:#93c5fd"></span>Reciprocator <span id="k_rec">0</span></span>
+                </div>
+            </div>
+        </div>
+
+        <div style="margin-top: 20px; display: flex; gap: 15px; justify-content: center;">
+            <button id="btnToggle" onclick="toggleSim()" style="background: #10b981; font-size: 1.1rem; padding: 12px 40px;">▶ Start Evolution</button>
+            <button onclick="addAgent()" style="background: #a855f7; font-size: 1.1rem; padding: 12px 30px;">➕ Random Freshman</button>
+            <button onclick="resetSim()" class="secondary" style="font-size: 1.1rem; padding: 12px 30px;">🔄 Clear & Reset</button>
+        </div>
+    </div>
+
+    <div class="page" id="sharePage">
+        <h2>📶 Publish Share (Earn 2 Points/Time)</h2>
+        <div style="max-width: 500px; margin: 0 auto; background: white; padding: 30px; border-radius: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.02);">
+            <label style="color:#666; font-size:0.9rem; margin-bottom:5px; display:block;">Shared WiFi Name</label>
+            <input type="text" id="w_name" placeholder="e.g., Library 5G Dedicated Line">
+
+            <label style="color:#666; font-size:0.9rem; margin-bottom:5px; display:block; margin-top:10px;">Select Share Speed</label>
+            <select id="w_speed">
+                <option value="50">50 Mbps (Recommended)</option>
+                <option value="100">100 Mbps (Ultra-fast)</option>
+            </select>
+
+            <label style="color:#666; font-size:0.9rem; margin-bottom:5px; display:block; margin-top:10px;">Cost per Connection (Points)</label>
+            <input type="number" id="w_cost" placeholder="Suggested 1-5 Points" value="2">
+
+            <button onclick="publishWifi()" style="width: 100%; margin-top: 20px; padding: 15px; font-size:1.1rem;">🚀 Confirm Publishing to Network Nodes</button>
+        </div>
+        <div style="text-align: center; margin-top: 20px;"><button class="secondary" onclick="goTo('homePage')">Back to Home</button></div>
+    </div>
+
+    <div class="page" id="wifiPage">
+        <h2>📍 Discover Nodes & Congestion Auction</h2>
+        <button class="secondary" onclick="goTo('homePage')" style="margin-bottom: 20px;">Back to Home</button>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+            <div class="dash-card">
+                <h3>🔍 Online Shared Nodes (Campus-wide)</h3>
+                <button onclick="loadWifis()" class="secondary" style="width:100%; margin-bottom: 15px;">Refresh for Latest Nodes</button>
+                <div id="wifiListArea" style="max-height: 350px; overflow-y: auto; padding-right:5px;"></div>
+            </div>
+
+            <div class="dash-card" style="background: #fffbeb; border-color: #fcd34d;">
+                <h3>⏳ Peak Hour Auction Channel</h3>
+                <p style="font-size: 0.9rem; color: #666; margin-bottom: 15px; line-height: 1.5;">
+                    Currently in network congestion period. This channel utilizes the **Generalized Second-Price (GSP) Auction** mechanism.<br><br>
+                    <span style="color:#ef4444; font-weight:bold;">Overdraft Prevention Warning:</span> Your bid must absolutely not exceed your account balance, otherwise it will be intercepted by the server.
+                </p>
+                <input type="number" id="bidAmount" placeholder="Enter your maximum budget (Points)" style="padding: 15px; font-size:1.1rem;">
+                <button onclick="simulateAuction()" style="background: #f59e0b; width: 100%; padding: 15px; font-size:1.1rem; margin-top:10px;">🔥 Submit Sealed Bid</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="page" id="rankPage">
+        <h2>🏆 Community Contribution Board · Evolutionary Reputation</h2>
+        <button class="secondary" onclick="goTo('homePage')">Back to Home</button>
+
+        <div style="display: flex; gap: 20px; margin: 20px 0; flex-wrap: wrap;">
+            <div class="rank-top-card" style="background: linear-gradient(145deg, #ffe11d, #fc62be); color: #1e2f5e;">
+                <div style="font-size: 1.8rem; font-weight: bold;" id="topShareName">Loading...</div>
+                <div>Top Sharer of the Week 👑</div>
+            </div>
+            <div class="rank-top-card" style="background: white; border: 1px solid #eef2f6;">
+                <div style="font-size: 2.5rem; color: #1e2f5e; font-weight: bold;" id="totalShareGB">0</div>
+                <div style="color: #666;">Total Network Shared Volume (GB)</div>
+            </div>
+        </div>
+
+        <div style="background: white; padding: 20px; border-radius: 20px; margin-bottom: 20px; border: 1px solid #eef2f6;">
+            <h3>📈 Network Reputation Level Distribution</h3>
+            <div class="grade-bar" id="gradeDistBar"></div>
+        </div>
+
+        <div style="background: #f8fafc; padding: 20px; border-radius: 20px; border: 1px solid #e2e8f0;">
+            <h3 style="margin-bottom: 15px;">🏅 Contribution Pioneer Board (Top 10)</h3>
+            <div id="rankListArea"></div>
+        </div>
+    </div>
+
+    <div class="page" id="scorePage">
+        <h2>🎁 Points Mall</h2>
+        <button class="secondary" onclick="goTo('homePage')">Back to Home</button>
+        <div id="storeListArea" style="margin-top:20px; display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;"></div>
+    </div>
+
+    <div class="page" id="adminPage">
+        <h2>⚙️ Admin Control System</h2>
+        <button class="secondary" onclick="goTo('homePage')">Back to Home</button>
+
+        <div class="admin-section" id="userManagementSection" style="display: none;">
+            <h3>👨‍💻 Account Management (Root/Admin)</h3>
+            <div style="display: flex; gap: 10px; margin: 10px 0;">
+                <input type="text" id="a_sid" placeholder="Student ID">
+                <input type="text" id="a_name" placeholder="Nickname">
+                <input type="password" id="a_pwd" placeholder="Password">
+                <select id="a_role">
+                    <option value="user">Normal User</option>
+                    <option value="admin">System Administrator</option>
+                </select>
+                <button onclick="adminCreateUser()">Create Account</button>
+            </div>
+            <div id="adminUserList"></div>
+        </div>
+
+        <div class="admin-section">
+            <h3>🛍️ Dynamic Mall Management</h3>
+            <div style="display: flex; gap: 10px; margin: 10px 0;">
+                <input type="text" id="s_name" placeholder="Item Name">
+                <input type="number" id="s_cost" placeholder="Price in Points">
+                <input type="text" id="s_desc" placeholder="Short Description">
+                <button onclick="adminAddStoreItem()">List Item</button>
+            </div>
+            <div id="adminStoreList"></div>
+        </div>
+
+        <div class="admin-section">
+            <h3>📡 Network Node Force Removal</h3>
+            <button onclick="adminLoadWifi()" class="secondary" style="margin-bottom: 15px;">Refresh Online Nodes</button>
+            <div id="adminWifiList"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ==========================================
+    // 1. Global Variables & Utility Functions
+    // ==========================================
+    let pieChart = null;
+    let barChart = null;
+    let pollTimer = null;
+
+    function showMsg(m, t='info') {
+        const n = document.getElementById('notification');
+        n.style.background = t === 'success' ? '#10b981' : (t === 'error' ? '#ef4444' : '#1e2f5e');
+        document.getElementById('notificationText').innerText = m;
+        n.style.display = 'block';
+        setTimeout(() => n.style.display = 'none', 3000);
+    }
+
+    function toggleAuth() {
+        const l = document.getElementById('loginForm'), r = document.getElementById('regForm');
+        l.style.display = l.style.display === 'none' ? 'block' : 'none';
+        r.style.display = r.style.display === 'none' ? 'block' : 'none';
+    }
+
+    function goTo(id) {
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+
+        // High frequency polling only for simulation page
+        if(id === 'simPage') { startPolling(); } else { stopPolling(); }
+
+        // Route hooks to trigger data loading
+        if(id === 'wifiPage') loadWifis();
+        if(id === 'rankPage') loadRankPage();
+        if(id === 'scorePage') loadStore();
+        if(id === 'adminPage') loadAdminData();
+    }
+
+    function logout() {
+        localStorage.clear();
+        stopPolling();
+        goTo('authPage');
+    }
+
+    async function apiPost(url, data) {
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(data)
+        });
+        const j = await res.json();
+        if(!res.ok) throw new Error(j.detail || "Request failed");
+        return j;
+    }
+
+    async function apiGet(url) {
+        return await (await fetch(url)).json();
+    }
+
+    // ==========================================
+    // 2. Login & Registration
+    // ==========================================
+    async function login() {
+        try {
+            const d = await apiPost('/api/login', {
+                student_id: document.getElementById('l_sid').value,
+                password: document.getElementById('l_pwd').value
+            });
+            localStorage.setItem('user', JSON.stringify(d.data));
+            initHomePage();
+            showMsg("Login successful", 'success');
+        } catch(e) { showMsg(e.message, 'error'); }
+    }
+
+    async function register() {
+        try {
+            await apiPost('/api/register', {
+                student_id: document.getElementById('r_sid').value,
+                name: document.getElementById('r_name').value,
+                password: document.getElementById('r_pwd').value
+            });
+            showMsg("Registration successful, please login", 'success');
+            toggleAuth();
+        } catch(e) { showMsg(e.message, 'error'); }
+    }
+
+    function initHomePage() {
+        const u = JSON.parse(localStorage.getItem('user'));
+        if(!u) { goTo('authPage'); return; }
+
+        document.getElementById('userName').innerText = u.name;
+        document.getElementById('userScore').innerText = u.score;
+        document.getElementById('adminBtn').style.display = (u.role === 'root' || u.role === 'admin') ? 'inline-block' : 'none';
+
+        goTo('homePage');
+    }
+
+    // ==========================================
+    // 3. Daily Check-in
+    // ==========================================
+    async function doDailySign() {
+        const u = JSON.parse(localStorage.getItem('user'));
+        try {
+            const res = await apiPost('/api/sign', { student_id: u.student_id });
+            u.score = res.new_score;
+            localStorage.setItem('user', JSON.stringify(u));
+            document.getElementById('userScore').innerText = u.score;
+            showMsg(res.msg, 'success');
+        } catch(e) {
+            showMsg(e.message, e.message.includes('checked in') || e.message.includes('已签到') ? 'info' : 'error');
+        }
+    }
+
+    // ==========================================
+    // 4. Leaderboard Loading
+    // ==========================================
+    async function loadRankPage() {
+        try {
+            const data = await apiGet('/api/leaderboard');
+            if(data.top_users.length > 0) {
+                document.getElementById('topShareName').innerText = data.top_users[0].name;
+            }
+            document.getElementById('totalShareGB').innerText = data.total_shared;
+
+            const total = data.total_users || 1;
+            const g = data.grades;
+            document.getElementById('gradeDistBar').innerHTML = `
+                <div class="grade-s" style="width: ${(g['S']/total)*100}%">Tier S ${g['S']} Users</div>
+                <div class="grade-a" style="width: ${(g['A']/total)*100}%">Tier A ${g['A']} Users</div>
+                <div class="grade-b" style="width: ${(g['B']/total)*100}%">Tier B ${g['B']} Users</div>
+                <div class="grade-c" style="width: ${(g['C']/total)*100}%">Tier C ${g['C']} Users</div>
+            `;
+
+            document.getElementById('rankListArea').innerHTML = data.top_users.map((u, i) => `
+                <div class="list-item" style="border-left-color: ${i < 3 ? '#fbbf24' : '#cbd5e1'};">
+                    <div>
+                        <strong style="font-size:1.2rem;">${i+1}. ${u.name}</strong>
+                        <span style="font-size:0.8rem; background:#eef2f6; padding:2px 6px; border-radius:5px; margin-left:5px;">Rep: ${u.rep} pts</span>
+                    </div>
+                    <div style="text-align:right;">
+                        <span style="color:#8b5cf6; font-weight:bold; font-size:1.3rem;">${u.shared} GB</span><br>
+                        <span style="font-size:0.85rem; font-weight:bold; color:${u.grade==='S'?'#7e65cb':(u.grade==='A'?'#4e91e3':'#999')}">Tier ${u.grade}</span>
+                    </div>
+                </div>
+            `).join('');
+        } catch(e) { showMsg("Failed to load leaderboard", 'error'); }
+    }
+
+    // ==========================================
+    // 5. Sharing & Connection
+    // ==========================================
+    async function publishWifi() {
+        const u = JSON.parse(localStorage.getItem('user'));
+        try {
+            const res = await apiPost('/api/wifi', {
+                student_id: u.student_id,
+                name: document.getElementById('w_name').value || "Shared Node",
+                speed: document.getElementById('w_speed').value,
+                reserved: "0",
+                cost: parseInt(document.getElementById('w_cost').value) || 2
+            });
+            u.score = res.new_score;
+            localStorage.setItem('user', JSON.stringify(u));
+            document.getElementById('userScore').innerText = u.score;
+            showMsg("Published successfully, earned 2 points", 'success');
+            goTo('homePage');
+        } catch(e) { showMsg(e.message, 'error'); }
+    }
+
+    async function loadWifis() {
+        const ws = await apiGet('/api/wifi');
+        const b = document.getElementById('wifiListArea');
+        if(ws.length === 0) {
+            b.innerHTML='<p style="text-align:center; color:#666; margin-top:20px;">No one is sharing the network currently...</p>';
+            return;
+        }
+        b.innerHTML = ws.map(w => `
+            <div class="list-item">
+                <div>
+                    <strong style="font-size:1.1rem">${w.name}</strong><br>
+                    <span style="font-size:0.8rem; color:#666;">Provider: ${w.owner_id}</span>
+                </div>
+                <button onclick="buyAction('connect', ${w.cost}, '${w.owner_id}')">Connect (${w.cost} pts)</button>
+            </div>
+        `).join('');
+    }
+
+    async function simulateAuction() {
+        const b = parseInt(document.getElementById('bidAmount').value);
+        if(!b) return showMsg("Please enter a valid bid", 'error');
+
+        const u = JSON.parse(localStorage.getItem('user'));
+        if(b > u.score) {
+            return showMsg("Anti-overdraft interception: Insufficient balance for this bid!", 'error');
+        }
+
+        try {
+            const res = await apiPost('/api/transaction', { student_id: u.student_id, action_type: 'auction', amount: b, target_id: "" });
+            u.score = res.new_score;
+            localStorage.setItem('user', JSON.stringify(u));
+            document.getElementById('userScore').innerText = u.score;
+            showMsg(res.msg, res.msg.includes('success') || res.msg.includes('成功') ? 'success' : 'info');
+        } catch(e) { showMsg(e.message, 'error'); }
+    }
+
+    // ==========================================
+    // 6. Mall Redemption
+    // ==========================================
+    async function loadStore() {
+        const items = await apiGet('/api/store');
+        document.getElementById('storeListArea').innerHTML = items.map(i => `
+            <div class="info-card" style="text-align:center;">
+                <h3 style="font-size:1.2rem;">${i.name}</h3>
+                <p style="color:#666; margin-bottom:15px; font-size:0.9rem;">${i.desc}</p>
+                <button onclick="buyAction('buy', ${i.cost})" style="width:100%;">Redeem (${i.cost} pts)</button>
+            </div>
+        `).join('');
+    }
+
+    async function buyAction(type, amount, targetId="") {
+        const u = JSON.parse(localStorage.getItem('user'));
+        try {
+            const res = await apiPost('/api/transaction', {
+                student_id: u.student_id,
+                action_type: type,
+                amount: amount,
+                target_id: targetId
+            });
+            u.score = res.new_score;
+            localStorage.setItem('user', JSON.stringify(u));
+            document.getElementById('userScore').innerText = u.score;
+            showMsg(res.msg, 'success');
+        } catch(e) { showMsg(e.message, 'error'); }
+    }
+
+    // ==========================================
+    // 7. Evolution Sandbox Charts & Polling
+    // ==========================================
+    function initCharts() {
+        Chart.defaults.font.family = "'Inter', sans-serif";
+
+        pieChart = new Chart(document.getElementById('strategyChart').getContext('2d'), {
+            type: 'pie',
+            data: { labels: ['Cooperator', 'Free-rider', 'Reciprocator'], datasets: [{ data: [1,1,1], backgroundColor: ['#86efac', '#fdba74', '#93c5fd'], borderWidth: 0 }] },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+        });
+
+        barChart = new Chart(document.getElementById('repBarChart').getContext('2d'), {
+            type: 'bar',
+            data: { labels: ['Low', 'Med', 'High'], datasets: [{ data: [0,0,0], backgroundColor: ['#93c5fd', '#86efac', '#fdba74'], borderRadius: 6 }] },
+            options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, display: false }, x: { grid: { display: false } } }, plugins: { legend: { display: false } } }
+        });
+    }
+
+    async function fetchSimData() {
+        try {
+            const d = await apiGet('/api/simulation');
+            document.getElementById('simTick').innerText = d.tick;
+
+            ['c_coop','k_coop'].forEach(id => document.getElementById(id).innerText = d.coop);
+            ['c_def','k_def'].forEach(id => document.getElementById(id).innerText = d.defect);
+            ['c_rec','k_rec'].forEach(id => document.getElementById(id).innerText = d.recip);
+
+            document.getElementById('r_low').innerText = d.rep_low;
+            document.getElementById('r_med').innerText = d.rep_med;
+            document.getElementById('r_high').innerText = d.rep_high;
+            document.getElementById('k_total').innerText = d.total;
+            document.getElementById('k_rep').innerText = d.avg_rep;
+            document.getElementById('k_freq').innerText = d.coop_freq;
+
+            if(pieChart){ pieChart.data.datasets[0].data = [d.coop, d.defect, d.recip]; pieChart.update(); }
+            if(barChart){ barChart.data.datasets[0].data = [d.rep_low, d.rep_med, d.rep_high]; barChart.update(); }
+
+            const btn = document.getElementById('btnToggle');
+            if(d.is_running) {
+                btn.innerText = "⏹ Stop"; btn.style.background = "#ef4444";
+            } else {
+                btn.innerText = "▶ Start Evolution"; btn.style.background = "#10b981";
+            }
+        } catch(e){}
+    }
+
+    function startPolling() {
+        if(!pollTimer) pollTimer = setInterval(fetchSimData, 1500);
+        fetchSimData();
+    }
+
+    function stopPolling() {
+        clearInterval(pollTimer);
+        pollTimer = null;
+    }
+
+    async function toggleSim() { await apiPost('/api/simulation/toggle', {}); fetchSimData(); }
+    async function addAgent() { await apiPost('/api/simulation/add_agent', {}); showMsg("Freshman dropped into sandbox", "success"); fetchSimData(); }
+    async function resetSim() { await apiPost('/api/simulation/reset', {}); showMsg("Sandbox cleared and reset", "success"); fetchSimData(); }
+
+    // ==========================================
+    // 8. Admin Control Logic (RBAC)
+    // ==========================================
+    function getAdminPayload(target="", data={}) {
+        return {
+            operator_id: JSON.parse(localStorage.getItem('user')).student_id,
+            target_id: target,
+            data: data
+        };
+    }
+
+    async function loadAdminData() {
+        const u = JSON.parse(localStorage.getItem('user'));
+        if(u.role === 'root' || u.role === 'admin') {
+            document.getElementById('userManagementSection').style.display = 'block';
+
+            if(u.role === 'admin') {
+                const roleSelect = document.getElementById('a_role');
+                for (let i = 0; i < roleSelect.options.length; i++) {
+                    if (roleSelect.options[i].value === 'admin') {
+                        roleSelect.options[i].disabled = true;
+                        roleSelect.options[i].innerText += " (No permission)";
+                    }
+                }
+            }
+            adminLoadUsers();
+        }
+        adminLoadStore();
+        adminLoadWifi();
+    }
+
+    async function adminLoadUsers() {
+        try {
+            const users = await apiPost('/api/admin/users', getAdminPayload());
+            document.getElementById('adminUserList').innerHTML = users.map(u => `
+                <div class="list-item">
+                    <span>[${u.role}] <strong>${u.student_id}</strong> (${u.name}) - Pts: ${u.score}</span>
+                    <button class="danger" onclick="adminDelUser('${u.student_id}')">Delete Account</button>
+                </div>
+            `).join('');
+        } catch(e) { showMsg("No permission to get user list", 'error'); }
+    }
+
+    async function adminCreateUser() {
+        try {
+            await apiPost('/api/admin/user/create', getAdminPayload("", {
+                student_id: document.getElementById('a_sid').value,
+                name: document.getElementById('a_name').value,
+                password: document.getElementById('a_pwd').value,
+                role: document.getElementById('a_role').value
+            }));
+            showMsg("Account created successfully", 'success');
+            adminLoadUsers();
+        } catch(e) { showMsg(e.message, 'error'); }
+    }
+
+    async function adminDelUser(id) {
+        if(!confirm(`Dangerous operation: Confirm complete deletion of account ${id}?`)) return;
+        try {
+            await apiPost('/api/admin/user/delete', getAdminPayload(id));
+            showMsg("Deleted successfully", 'success');
+            adminLoadUsers();
+        } catch(e) { showMsg(e.message, 'error'); }
+    }
+
+    async function adminLoadStore() {
+        const items = await apiGet('/api/store');
+        document.getElementById('adminStoreList').innerHTML = items.map(i => `
+            <div class="list-item">
+                <span><strong>${i.name}</strong> (${i.cost} pts)</span>
+                <button class="danger" onclick="adminDelStore('${i.id}')">Delist Item</button>
+            </div>
+        `).join('');
+    }
+
+    async function adminAddStoreItem() {
+        try {
+            await apiPost('/api/admin/store/add', getAdminPayload("", {
+                name: document.getElementById('s_name').value,
+                cost: parseInt(document.getElementById('s_cost').value),
+                desc: document.getElementById('s_desc').value
+            }));
+            showMsg("Item listed successfully", 'success');
+            adminLoadStore();
+        } catch(e) { showMsg(e.message, 'error'); }
+    }
+
+    async function adminDelStore(id) {
+        try {
+            await apiPost('/api/admin/store/delete', getAdminPayload(id));
+            showMsg("Delisted successfully", 'info');
+            adminLoadStore();
+        } catch(e) { showMsg(e.message, 'error'); }
+    }
+
+    async function adminLoadWifi() {
+        const wifis = await apiGet('/api/wifi');
+        if(wifis.length === 0) {
+            document.getElementById('adminWifiList').innerHTML = '<p style="color:#666;">No nodes currently running on the network</p>';
+            return;
+        }
+        document.getElementById('adminWifiList').innerHTML = wifis.map(w => `
+            <div class="list-item">
+                <span>[Owner:${w.owner_id}] <strong>${w.name}</strong> (Price:${w.cost} pts)</span>
+                <button class="danger" onclick="adminDelWifi('${w.id}')">Force Remove Node</button>
+            </div>
+        `).join('');
+    }
+
+    async function adminDelWifi(id) {
+        try {
+            await apiPost('/api/admin/wifi/delete', getAdminPayload(id));
+            showMsg("Force removal successful", 'info');
+            adminLoadWifi();
+        } catch(e) { showMsg(e.message, 'error'); }
+    }
+
+    // ==========================================
+    // 9. Initialization
+    // ==========================================
+    window.onload = () => {
+        initCharts();
+        if(localStorage.getItem('user')) {
+            initHomePage();
+        }
+    };
+</script>
+</body>
+</html>
